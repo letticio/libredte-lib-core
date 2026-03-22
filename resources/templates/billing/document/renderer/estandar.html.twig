@@ -85,6 +85,7 @@
         .tipo-documento {
             font-size: 12pt;
         }
+
         .sucursal-sii {
             margin-top: 5px;
             font-size: 10pt;
@@ -357,6 +358,16 @@
     </style>
 </head>
     <body>
+        {% set tipoDte = (document.Encabezado.IdDoc.TipoDTE | default('')) ~ '' %}
+        {% set isBoleta = tipoDte in ['39', '41'] %}
+        {% set isBoletaAfecta = tipoDte == '39' %}
+        {% set isBoletaExenta = tipoDte == '41' %}
+        {% set isFacturaAfecta = tipoDte == '33' %}
+        {% set isFacturaExenta = tipoDte == '34' %}
+        {% set isNotaCredito = tipoDte == '61' %}
+        {% set isNotaDebito = tipoDte == '56' %}
+        {% set isGuiaDespacho = tipoDte == '52' %}
+
         <div class="container">
             {# Información del Emisor #}
             <div class="emisor-info">
@@ -393,6 +404,7 @@
                         {{ document.Encabezado.IdDoc.TipoDTE
                             | format_as('billing_document.TipoDTE') }}
                     </p>
+
                     <p>
                         N° {{ document.Encabezado.IdDoc.Folio }}
                     </p>
@@ -841,7 +853,7 @@
                             <tbody>
                                 {% set otraMoneda = document.Encabezado.Totales.TpoMoneda is not empty and document.Encabezado.Totales.TpoMoneda == 'DOLAR USA' %}
                                 {# Neto -#}
-                                {% if document.Encabezado.Totales.MntNeto is not empty %}
+                                {% if document.Encabezado.Totales.MntNeto is not empty and not isBoletaExenta %}
                                     <tr>
                                         <td> Neto $: </td>
                                         <td>
@@ -880,7 +892,7 @@
                                     </tr>
                                 {% endif %}
                                 {# IVA -#}
-                                {% if document.Encabezado.Totales.IVA is not empty %}
+                                {% if document.Encabezado.Totales.IVA is not empty and not isBoletaExenta %}
                                     <tr>
                                         <td>
                                             IVA {{ document.Encabezado.Totales.TasaIVA is not empty
@@ -936,7 +948,19 @@
                                 {% endif %}
                                 {# Total -#}
                                 <tr>
-                                    <td>Total $:</td>
+                                    <td>
+                                        {% if isBoleta %}
+                                            Total boleta $:
+                                        {% elseif isNotaCredito %}
+                                            Total nota credito $:
+                                        {% elseif isNotaDebito %}
+                                            Total nota debito $:
+                                        {% elseif isGuiaDespacho %}
+                                            Total guia $:
+                                        {% else %}
+                                            Total $:
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if otraMoneda %}
                                             {{ document.Encabezado.Totales.MntTotal
@@ -948,7 +972,7 @@
                                     </td>
                                 </tr>
                                 {# No facturable -#}
-                                {% if document.Encabezado.Totales.MontoNF is not empty %}
+                                {% if document.Encabezado.Totales.MontoNF is not empty and not isBoleta %}
                                     <tr>
                                         <td>No facturable $:</td>
                                         <td>
